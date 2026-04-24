@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User model
+model User {
+  id        String     @id @default(cuid())
+  clerkId   String     @unique
+  email     String     @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  workflows Workflow[]
+  executions WorkflowExecution[]
+}
+
+// Workflow model
+model Workflow {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  description String?
+  nodes     Json       // Stores React Flow nodes
+  edges     Json       // Stores React Flow edges
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  executions WorkflowExecution[]
+  
+  @@unique([userId, name])
+}
+
+// Workflow Execution model
+model WorkflowExecution {
+  id        String     @id @default(cuid())
+  workflowId String
+  workflow  Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  status    ExecutionStatus @default(RUNNING)
+  startedAt DateTime   @default(now())
+  completedAt DateTime?
+  
+  nodeExecutions NodeExecution[]
+  
+  @@index([workflowId])
+  @@index([userId])
+}
+
+enum ExecutionStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+// Individual node execution
+model NodeExecution {
+  id        String     @id @default(cuid())
+  executionId String
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  
+  nodeId    String
+  nodeType  String
+  
+  status    NodeExecutionStatus @default(PENDING)
+  input     Json?
+  output    Json?
+  error     String?
+  
+  startedAt DateTime?
+  completedAt DateTime?
+  duration  Int?       // milliseconds
+  
+  @@index([executionId])
+}
+
+enum NodeExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  SKIPPED
+}

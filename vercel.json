@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "DATABASE_URL": "@nextprod_database_url",
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "@clerk_publishable_key",
+    "CLERK_SECRET_KEY": "@clerk_secret_key",
+    "CLERK_WEBHOOK_SECRET": "@clerk_webhook_secret",
+    "NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY": "@google_api_key",
+    "TRIGGER_DEV_API_KEY": "@trigger_dev_api_key",
+    "NEXT_PUBLIC_TRANSLOADIT_KEY": "@transloadit_key",
+    "TRANSLOADIT_SECRET": "@transloadit_secret"
+  },
+  "buildOutputDirectory": ".next",
+  "framework": "nextjs"
+}
