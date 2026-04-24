@@ -22,86 +22,98 @@ export default function WorkflowEditorPage() {
   const workflowId = params.id as string;
 
   const {
-    nodes: hookNodes,
-    edges: hookEdges,
-    loading,
-    setNodes: setHookNodes,
-    setEdges: setHookEdges,
-    loadWorkflow,
-    saveWorkflow,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-  } = useWorkflow(workflowId);
-
-  const {
     nodes: storeNodes,
     edges: storeEdges,
     setNodes: setStoreNodes,
     setEdges: setStoreEdges,
-    updateNode,
     deleteNode: deleteStoreNode,
     addNode: addStoreNode,
     addEdge: addStoreEdge,
-    removeEdge: removeStoreEdge,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
     selectNode,
     saveToHistory,
     reset,
   } = useWorkflowStore();
 
-  const { executeWorkflow, execution } = useExecution();
+  const {
+    loading,
+    saveWorkflow,
+  } = useWorkflow(workflowId);
+
+  const { executeWorkflow } = useExecution();
 
   const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
-  // Sync with store
-  useEffect(() => {
-    if (hookNodes.length > 0) {
-      setStoreNodes(hookNodes);
-      setStoreEdges(hookEdges);
-    }
-  }, [hookNodes, hookEdges]);
+  // Handle node position changes when dragging
+  const onNodesChange = useCallback((changes: any) => {
+    const updated = [...storeNodes];
+    changes.forEach((change: any) => {
+      const index = updated.findIndex((n) => n.id === change.id);
+      if (index !== -1) {
+        if (change.type === "position" && change.position) {
+          updated[index].position = change.position;
+        } else if (change.type === "select") {
+          updated[index].selected = change.isSelected;
+        } else if (change.type === "remove") {
+          updated.splice(index, 1);
+        }
+      }
+    });
+    setStoreNodes(updated);
+  }, [storeNodes, setStoreNodes]);
 
-  // Load workflow on mount
-  useEffect(() => {
-    loadWorkflow();
-  }, [loadWorkflow]);
+  // Handle edge changes
+  const onEdgesChange = useCallback((changes: any) => {
+    let updated = [...storeEdges];
+    changes.forEach((change: any) => {
+      if (change.type === "remove") {
+        updated = updated.filter((e) => e.id !== change.id);
+      }
+    });
+    setStoreEdges(updated);
+  }, [storeEdges, setStoreEdges]);
 
- const handleAddNode = (type: string) => {
-  const newNode: Node<NodeData> = {
-    id: `${type}-${Date.now()}`,
-    data: {
+  // Handle new connections
+  const onConnect = useCallback((connection: any) => {
+    const newEdge = {
+      ...connection,
+      id: `edge-${Date.now()}`,
+    };
+    addStoreEdge(newEdge);
+  }, [addStoreEdge]);
+
+  // Add new node from sidebar
+  const handleAddNode = (type: string) => {
+    const newNode: Node<NodeData> = {
       id: `${type}-${Date.now()}`,
-      type: type as any,
-      label: type.charAt(0).toUpperCase() + type.slice(1),
-    },
-    position: { x: Math.random() * 400, y: Math.random() * 400 },
-     type: type,
-    draggable: true,  // ← ADD THIS LINE!
+      data: {
+        id: `${type}-${Date.now()}`,
+        type: type as any,
+        label: type.charAt(0).toUpperCase() + type.slice(1),
+      },
+      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      type: type,
+      draggable: true,
+    };
+
+    addStoreNode(newNode);
+    saveToHistory();
+    toast.success(`${type} node added`);
   };
 
-  addStoreNode(newNode);
-  saveToHistory();
-  toast.success(`${type} node added`);
-};
-
+  // Delete node
   const handleDeleteNode = (id: string) => {
     deleteStoreNode(id);
     saveToHistory();
     toast.success("Node deleted");
   };
 
+  // Save workflow
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await saveWorkflow(workflowName);
-      setHookNodes(storeNodes);
-      setHookEdges(storeEdges);
       saveToHistory();
       toast.success("Workflow saved");
     } catch (error) {
@@ -111,6 +123,7 @@ export default function WorkflowEditorPage() {
     }
   };
 
+  // Execute workflow
   const handleExecute = async () => {
     if (storeNodes.length === 0) {
       toast.error("Add nodes to your workflow first");
@@ -129,11 +142,13 @@ export default function WorkflowEditorPage() {
     }
   };
 
+  // Export workflow
   const handleExport = () => {
     exportWorkflow(storeNodes, storeEdges, workflowName);
     toast.success("Workflow exported");
   };
 
+  // Import workflow
   const handleImport = (data: any) => {
     try {
       const { nodes, edges } = importWorkflow(data);
@@ -146,6 +161,7 @@ export default function WorkflowEditorPage() {
     }
   };
 
+  // Clear canvas
   const handleClear = () => {
     if (confirm("Are you sure? This will clear all nodes and edges.")) {
       reset();
@@ -153,6 +169,7 @@ export default function WorkflowEditorPage() {
     }
   };
 
+  // Duplicate workflow
   const handleDuplicate = async () => {
     try {
       const newName = `${workflowName} (copy)`;
@@ -229,19 +246,15 @@ export default function WorkflowEditorPage() {
 
         {/* Canvas */}
         <div className="flex-1 overflow-hidden">
-       <div className="flex-1 overflow-hidden">
-  <WorkflowCanvas
-    initialNodes={storeNodes}
-    initialEdges={storeEdges}
-    onNodesChange={onNodesChange}
-    onEdgesChange={onEdgesChange}
-    onConnect={onConnect}
-    onNodeDelete={handleDeleteNode}
-    onNodeSelect={selectNode}
-    onAddNode={handleAddNode}
-  />
-</div>
-          
+          <WorkflowCanvas
+            initialNodes={storeNodes}
+            initialEdges={storeEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeDelete={handleDeleteNode}
+            onNodeSelect={selectNode}
+          />
         </div>
 
         {/* Right Sidebar - History */}
