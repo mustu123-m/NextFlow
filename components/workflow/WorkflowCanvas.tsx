@@ -8,11 +8,10 @@ import {
   Connection,
   useNodesState,
   useEdgesState,
-  addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/nodes/NodeTypes";
-import { Node, Edge } from "reactflow";
+import { Node, Edge, NodeChange, EdgeChange } from "reactflow";
 import { NodeData } from "@/lib/types";
 import { validateDAG, validateConnections } from "@/lib/utils/validation";
 import toast from "react-hot-toast";
@@ -21,8 +20,8 @@ import { useEffect } from "react";
 interface WorkflowCanvasProps {
   initialNodes: Node<NodeData>[];
   initialEdges: Edge[];
-  onNodesChange: any;
-  onEdgesChange: any;
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   onNodeDelete?: (nodeId: string) => void;
   onNodeSelect?: (nodeId: string | null) => void;
@@ -42,22 +41,22 @@ export default function WorkflowCanvas({
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
 
-  // Sync initialNodes to internal state
+  // Sync initialNodes to internal state whenever they change
   useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
 
-  // Sync initialEdges to internal state
+  // Sync initialEdges to internal state whenever they change
   useEffect(() => {
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
-  const handleNodesChange = (changes: any) => {
+  const handleNodesChange = (changes: NodeChange[]) => {
     onNodesChangeInternal(changes);
     onNodesChange(changes);
   };
 
-  const handleEdgesChange = (changes: any) => {
+  const handleEdgesChange = (changes: EdgeChange[]) => {
     onEdgesChangeInternal(changes);
     onEdgesChange(changes);
   };

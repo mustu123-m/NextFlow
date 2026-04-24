@@ -120,7 +120,9 @@ const handleAddNode = (type: string) => {
     };
 
     addStoreNode(newNode);
+     setTimeout(() => {
     saveToHistory();
+  }, 0);
     toast.success(`${type} node added`);
   };
 
