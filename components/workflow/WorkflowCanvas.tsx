@@ -7,6 +7,7 @@ import {
   MiniMap,
   Connection,
 } from "reactflow";
+import { useMemo } from "react";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/nodes/NodeTypes";
 import { Node, Edge, NodeChange, EdgeChange } from "reactflow";
@@ -51,6 +52,14 @@ export default function WorkflowCanvas({
     toast.success("Connection created");
   };
 
+  // DEBUG: Log canvas nodes
+console.log("❌ DEBUG CANVAS - Received nodes:", initialNodes);
+console.log("❌ DEBUG CANVAS - Nodes length:", initialNodes.length);
+initialNodes.forEach((node, i) => {
+  console.log(`  Canvas Node ${i}:`, node.id, node.type, node.data?.type);
+});
+const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+
   return (
     <ReactFlow
       nodes={initialNodes}
@@ -58,7 +67,7 @@ export default function WorkflowCanvas({
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={handleConnect}
-      nodeTypes={nodeTypes}
+      nodeTypes={memoizedNodeTypes}
       fitView
       onNodeClick={(event, node) => onNodeSelect?.(node.id)}
       onPaneClick={() => onNodeSelect?.(null)}

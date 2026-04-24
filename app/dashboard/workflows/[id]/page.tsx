@@ -59,6 +59,14 @@ export default function WorkflowEditorPage() {
     };
     load();
   }, [workflowId, setStoreNodes, setStoreEdges]);
+  // DEBUG: Log store nodes
+useEffect(() => {
+  console.log("❌ DEBUG PAGE - Store nodes:", storeNodes);
+  console.log("❌ DEBUG PAGE - Nodes length:", storeNodes.length);
+  storeNodes.forEach((node, i) => {
+    console.log(`  Node ${i}:`, node.id, node.type, node.data?.type);
+  });
+}, [storeNodes]);
 
   // Handle node position changes when dragging
 const onNodesChange = useCallback((changes: NodeChange[]) => {
