@@ -6,8 +6,6 @@ import {
   Controls,
   MiniMap,
   Connection,
-  useNodesState,
-  useEdgesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/nodes/NodeTypes";
@@ -15,7 +13,6 @@ import { Node, Edge, NodeChange, EdgeChange } from "reactflow";
 import { NodeData } from "@/lib/types";
 import { validateDAG, validateConnections } from "@/lib/utils/validation";
 import toast from "react-hot-toast";
-import { useEffect } from "react";
 
 interface WorkflowCanvasProps {
   initialNodes: Node<NodeData>[];
@@ -25,7 +22,6 @@ interface WorkflowCanvasProps {
   onConnect: (connection: Connection) => void;
   onNodeDelete?: (nodeId: string) => void;
   onNodeSelect?: (nodeId: string | null) => void;
-  onAddNode?: (type: string) => void;
 }
 
 export default function WorkflowCanvas({
@@ -36,41 +32,17 @@ export default function WorkflowCanvas({
   onConnect,
   onNodeDelete,
   onNodeSelect,
-  onAddNode,
 }: WorkflowCanvasProps) {
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
-
-  // Sync initialNodes to internal state whenever they change
-  useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
-
-  // Sync initialEdges to internal state whenever they change
-  useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges, setEdges]);
-
-  const handleNodesChange = (changes: NodeChange[]) => {
-    onNodesChangeInternal(changes);
-    onNodesChange(changes);
-  };
-
-  const handleEdgesChange = (changes: EdgeChange[]) => {
-    onEdgesChangeInternal(changes);
-    onEdgesChange(changes);
-  };
-
   const handleConnect = (connection: Connection) => {
-    const newEdges = [...edges, connection as any];
-    const errors = validateConnections(nodes, newEdges);
+    const newEdges = [...initialEdges, connection as any];
+    const errors = validateConnections(initialNodes, newEdges);
 
     if (errors.length > 0) {
       toast.error(errors[0]);
       return;
     }
 
-    if (!validateDAG(nodes, newEdges)) {
+    if (!validateDAG(initialNodes, newEdges)) {
       toast.error("Connection would create a circular dependency");
       return;
     }
@@ -81,27 +53,16 @@ export default function WorkflowCanvas({
 
   return (
     <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={handleNodesChange}
-      onEdgesChange={handleEdgesChange}
+      nodes={initialNodes}
+      edges={initialEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
       onConnect={handleConnect}
       nodeTypes={nodeTypes}
       fitView
       onNodeClick={(event, node) => onNodeSelect?.(node.id)}
       onPaneClick={() => onNodeSelect?.(null)}
       deleteKeyCode="Delete"
-      onDragOver={(event) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        const nodeType = event.dataTransfer.getData("application/reactflow");
-        if (nodeType && onAddNode) {
-          onAddNode(nodeType);
-        }
-      }}
     >
       <Background />
       <Controls />
