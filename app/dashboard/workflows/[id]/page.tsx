@@ -228,21 +228,19 @@ export default function WorkflowEditorPage() {
         <Sidebar onAddNode={handleAddNode} />
 
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden"><WorkflowCanvas
-  initialNodes={storeNodes}
-  initialEdges={storeEdges}
-  onNodesChange={(changes:any) => {
-    onNodesChange(changes);
-    setStoreNodes(hookNodes);
-  }}
-  onEdgesChange={(changes:any) => {
-    onEdgesChange(changes);
-    setStoreEdges(hookEdges);
-  }}
-  onConnect={onConnect}
-  onNodeDelete={handleDeleteNode}
-  onNodeSelect={selectNode}
-/>
+        <div className="flex-1 overflow-hidden">
+       <div className="flex-1 overflow-hidden">
+  <WorkflowCanvas
+    initialNodes={storeNodes}
+    initialEdges={storeEdges}
+    onNodesChange={onNodesChange}
+    onEdgesChange={onEdgesChange}
+    onConnect={onConnect}
+    onNodeDelete={handleDeleteNode}
+    onNodeSelect={selectNode}
+    onAddNode={handleAddNode}
+  />
+</div>
           
         </div>
 
