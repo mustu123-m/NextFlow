@@ -69,15 +69,19 @@ export const useWorkflowStore = create<WorkflowState>()(
         edges: state.edges.filter((edge) => edge.source !== id && edge.target !== id),
       })),
 
-    addNode: (node) =>
-      set((state) => ({
-        nodes: [...state.nodes, node],
-      })),
+   addNode: (node) =>
+  set((state) => ({
+    nodes: Array.isArray(state.nodes) 
+      ? [...state.nodes, node]
+      : [node],
+  })),
 
-    addEdge: (edge) =>
-      set((state) => ({
-        edges: [...state.edges, edge],
-      })),
+addEdge: (edge) =>
+  set((state) => ({
+    edges: Array.isArray(state.edges)
+      ? [...state.edges, edge]
+      : [edge],
+  })),
 
     removeEdge: (id) =>
       set((state) => ({

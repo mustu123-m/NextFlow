@@ -2,6 +2,10 @@ import { Node, Edge } from "reactflow";
 
 // Validate workflow DAG (no circular dependencies)
 export function validateDAG(nodes: Node[], edges: Edge[]): boolean {
+  if (!Array.isArray(nodes) || !Array.isArray(edges)) {
+    return true; // Skip validation if not arrays
+  }
+
   const adjacencyList = new Map<string, string[]>();
   
   // Build adjacency list
@@ -49,6 +53,10 @@ export function validateDAG(nodes: Node[], edges: Edge[]): boolean {
 export function validateConnections(nodes: Node[], edges: Edge[]): string[] {
   const errors: string[] = [];
   
+  if (!Array.isArray(nodes) || !Array.isArray(edges)) {
+    return errors; // Skip validation if not arrays
+  }
+  
   edges.forEach(edge => {
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
@@ -86,6 +94,10 @@ export function calculateExecutionOrder(
   nodes: Node[],
   edges: Edge[]
 ): string[] {
+  if (!Array.isArray(nodes) || !Array.isArray(edges)) {
+    return []; // Return empty if not arrays
+  }
+
   const adjacencyList = new Map<string, string[]>();
   const inDegree = new Map<string, number>();
   

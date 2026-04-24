@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback ,useRef} from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import WorkflowCanvas from "@/components/workflow/WorkflowCanvas";
@@ -8,19 +8,19 @@ import Sidebar from "@/components/workflow/Sidebar";
 import HistoryPanel from "@/components/workflow/HistoryPanel";
 import ToolbarActions from "@/components/workflow/ToolbarActions";
 import ValidationPanel from "@/components/workflow/ValidationPanel";
-import { useWorkflow } from "@/lib/hooks/useWorkflow";
 import { useExecution } from "@/lib/hooks/useExecution";
 import { useWorkflowStore } from "@/lib/store/workflowStore";
 import { exportWorkflow, importWorkflow } from "@/components/workflow/WorkflowExportImport";
 import { Play, Save, Copy } from "lucide-react";
 import toast from "react-hot-toast";
-import { Node } from "reactflow";
+import { Node, NodeChange, EdgeChange, Connection } from "reactflow";
 import { NodeData } from "@/lib/types";
+import * as api from "@/lib/utils/api";
 
 export default function WorkflowEditorPage() {
   const params = useParams();
   const workflowId = params.id as string;
-
+   const nodeCounterRef = useRef(0);
   const {
     nodes: storeNodes,
     edges: storeEdges,
@@ -34,48 +34,67 @@ export default function WorkflowEditorPage() {
     reset,
   } = useWorkflowStore();
 
-  const {
-    loading,
-    saveWorkflow,
-  } = useWorkflow(workflowId);
-
   const { executeWorkflow } = useExecution();
 
   const [workflowName, setWorkflowName] = useState("Untitled Workflow");
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Load workflow on mount
+  useEffect(() => {
+    const load = async () => {
+      if (!workflowId) return;
+      setLoading(true);
+      try {
+        const workflow = await api.getWorkflow(workflowId);
+        setWorkflowName(workflow.name || "Untitled Workflow");
+        setStoreNodes(workflow.nodes || []);
+        setStoreEdges(workflow.edges || []);
+      } catch (error) {
+        toast.error("Failed to load workflow");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [workflowId, setStoreNodes, setStoreEdges]);
 
   // Handle node position changes when dragging
-  const onNodesChange = useCallback((changes: any) => {
-    const updated = [...storeNodes];
-    changes.forEach((change: any) => {
-      const index = updated.findIndex((n) => n.id === change.id);
-      if (index !== -1) {
-        if (change.type === "position" && change.position) {
-          updated[index].position = change.position;
-        } else if (change.type === "select") {
-          updated[index].selected = change.isSelected;
-        } else if (change.type === "remove") {
-          updated.splice(index, 1);
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setStoreNodes((prevNodes) => {
+      const updated = [...prevNodes];
+      changes.forEach((change) => {
+        const index = updated.findIndex((n) => n.id === change.id);
+        if (index !== -1) {
+          if (change.type === "position" && change.position) {
+            updated[index].position = change.position;
+          } else if (change.type === "select") {
+            updated[index].selected = change.selected;
+          } else if (change.type === "remove") {
+            updated.splice(index, 1);
+          }
         }
-      }
+      });
+      return updated;
     });
-    setStoreNodes(updated);
-  }, [storeNodes, setStoreNodes]);
+  }, [setStoreNodes]);
 
   // Handle edge changes
-  const onEdgesChange = useCallback((changes: any) => {
-    let updated = [...storeEdges];
-    changes.forEach((change: any) => {
-      if (change.type === "remove") {
-        updated = updated.filter((e) => e.id !== change.id);
-      }
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    setStoreEdges((prevEdges) => {
+      let updated = [...prevEdges];
+      changes.forEach((change) => {
+        if (change.type === "remove") {
+          updated = updated.filter((e) => e.id !== change.id);
+        }
+      });
+      return updated;
     });
-    setStoreEdges(updated);
-  }, [storeEdges, setStoreEdges]);
+  }, [setStoreEdges]);
 
   // Handle new connections
-  const onConnect = useCallback((connection: any) => {
+  const onConnect = useCallback((connection: Connection) => {
     const newEdge = {
       ...connection,
       id: `edge-${Date.now()}`,
@@ -84,11 +103,14 @@ export default function WorkflowEditorPage() {
   }, [addStoreEdge]);
 
   // Add new node from sidebar
-  const handleAddNode = (type: string) => {
+const handleAddNode = (type: string) => {
+    nodeCounterRef.current += 1;
+    const uniqueId = `${type}-${Date.now()}-${nodeCounterRef.current}`;
+    
     const newNode: Node<NodeData> = {
-      id: `${type}-${Date.now()}`,
+      id: uniqueId,
       data: {
-        id: `${type}-${Date.now()}`,
+        id: uniqueId,
         type: type as any,
         label: type.charAt(0).toUpperCase() + type.slice(1),
       },
@@ -113,7 +135,11 @@ export default function WorkflowEditorPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await saveWorkflow(workflowName);
+      await api.updateWorkflow(workflowId, {
+        name: workflowName,
+        nodes: storeNodes,
+        edges: storeEdges,
+      });
       saveToHistory();
       toast.success("Workflow saved");
     } catch (error) {
@@ -173,7 +199,11 @@ export default function WorkflowEditorPage() {
   const handleDuplicate = async () => {
     try {
       const newName = `${workflowName} (copy)`;
-      await saveWorkflow(newName);
+      await api.createWorkflow({
+        name: newName,
+        nodes: storeNodes,
+        edges: storeEdges,
+      });
       toast.success("Workflow duplicated");
     } catch (error) {
       toast.error("Failed to duplicate workflow");
