@@ -12,9 +12,16 @@ export interface WorkflowState {
   isExecuting: boolean;
   executionId: string | null;
 
-  // Actions
-  setNodes: (nodes: Node<NodeData>[]) => void;
-  setEdges: (edges: Edge[]) => void;
+  setNodes: (
+    nodes:
+      | Node<NodeData>[]
+      | ((prev: Node<NodeData>[]) => Node<NodeData>[])
+  ) => void;
+  setEdges: (
+    edges:
+      | Edge[]
+      | ((prev: Edge[]) => Edge[])
+  ) => void;
   updateNode: (id: string, data: Partial<NodeData>) => void;
   deleteNode: (id: string) => void;
   addNode: (node: Node<NodeData>) => void;
@@ -46,12 +53,12 @@ export const useWorkflowStore = create<WorkflowState>()(
 
     setNodes: (nodes) =>
       set((state) => ({
-        nodes,
+        nodes: typeof nodes === "function" ? nodes(state.nodes) : nodes,
       })),
 
     setEdges: (edges) =>
       set((state) => ({
-        edges,
+        edges: typeof edges === "function" ? edges(state.edges) : edges,
       })),
 
     updateNode: (id, data) =>
@@ -69,19 +76,15 @@ export const useWorkflowStore = create<WorkflowState>()(
         edges: state.edges.filter((edge) => edge.source !== id && edge.target !== id),
       })),
 
-   addNode: (node) =>
-  set((state) => ({
-    nodes: Array.isArray(state.nodes) 
-      ? [...state.nodes, node]
-      : [node],
-  })),
+    addNode: (node) =>
+      set((state) => ({
+        nodes: [...state.nodes, node],
+      })),
 
-addEdge: (edge) =>
-  set((state) => ({
-    edges: Array.isArray(state.edges)
-      ? [...state.edges, edge]
-      : [edge],
-  })),
+    addEdge: (edge) =>
+      set((state) => ({
+        edges: [...state.edges, edge],
+      })),
 
     removeEdge: (id) =>
       set((state) => ({
@@ -97,8 +100,8 @@ addEdge: (edge) =>
       set((state) => {
         const newHistory = state.history.slice(0, state.historyIndex + 1);
         newHistory.push({
-          nodes: state.nodes,
-          edges: state.edges,
+          nodes: [...state.nodes],
+          edges: [...state.edges],
         });
         return {
           history: newHistory,
@@ -112,8 +115,8 @@ addEdge: (edge) =>
         const newIndex = state.historyIndex - 1;
         const snapshot = state.history[newIndex];
         return {
-          nodes: snapshot.nodes,
-          edges: snapshot.edges,
+          nodes: [...snapshot.nodes],
+          edges: [...snapshot.edges],
           historyIndex: newIndex,
         };
       }),
@@ -124,8 +127,8 @@ addEdge: (edge) =>
         const newIndex = state.historyIndex + 1;
         const snapshot = state.history[newIndex];
         return {
-          nodes: snapshot.nodes,
-          edges: snapshot.edges,
+          nodes: [...snapshot.nodes],
+          edges: [...snapshot.edges],
           historyIndex: newIndex,
         };
       }),

@@ -61,24 +61,24 @@ export default function WorkflowEditorPage() {
   }, [workflowId, setStoreNodes, setStoreEdges]);
 
   // Handle node position changes when dragging
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setStoreNodes((prevNodes) => {
-      const updated = [...prevNodes];
-      changes.forEach((change) => {
-        const index = updated.findIndex((n) => n.id === change.id);
-        if (index !== -1) {
-          if (change.type === "position" && change.position) {
-            updated[index].position = change.position;
-          } else if (change.type === "select") {
-            updated[index].selected = change.selected;
-          } else if (change.type === "remove") {
-            updated.splice(index, 1);
-          }
+const onNodesChange = useCallback((changes: NodeChange[]) => {
+  setStoreNodes((prevNodes) => {
+    const updated = [...prevNodes];
+    changes.forEach((change) => {
+      const index = updated.findIndex((n) => n.id === change.id);
+      if (index !== -1) {
+        if (change.type === "position" && change.position) {
+          updated[index].position = change.position;
+        } else if (change.type === "select") {
+          updated[index].selected = change.selected;
+        } else if (change.type === "remove") {
+          updated.splice(index, 1);
         }
-      });
-      return updated;
+      }
     });
-  }, [setStoreNodes]);
+    return updated;
+  });
+}, [setStoreNodes]);
 
   // Handle edge changes
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
