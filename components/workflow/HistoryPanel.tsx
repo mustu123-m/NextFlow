@@ -16,6 +16,7 @@ export default function HistoryPanel({ workflowId }: HistoryPanelProps) {
   const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -27,8 +28,19 @@ export default function HistoryPanel({ workflowId }: HistoryPanelProps) {
     try {
       const history = await api.getExecutionHistory(workflowId);
       setExecutions(history);
-    } catch (error) {
-      console.error("Failed to load history:", error);
+      setAuthError(false);
+    } catch (error: any) {
+      // Silently handle 403 errors (auth/permission issue)
+      if (error.response?.status === 403) {
+        setAuthError(true);
+        setExecutions([]);
+      } else if (error.response?.status === 401) {
+        // User not authenticated
+        setAuthError(true);
+        setExecutions([]);
+      } else {
+        console.error("Failed to load history:", error);
+      }
     }
   }
 
@@ -51,7 +63,11 @@ export default function HistoryPanel({ workflowId }: HistoryPanelProps) {
     <div className="w-80 border-l border-secondary bg-secondary/50 p-4 overflow-y-auto">
       <h3 className="text-sm font-semibold mb-4">Workflow History</h3>
 
-      {executions.length === 0 ? (
+      {authError ? (
+        <p className="text-xs text-muted-foreground">
+          History unavailable. Please ensure you're logged in.
+        </p>
+      ) : executions.length === 0 ? (
         <p className="text-xs text-muted-foreground">No executions yet</p>
       ) : (
         <div className="space-y-2">

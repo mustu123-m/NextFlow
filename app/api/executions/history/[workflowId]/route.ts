@@ -10,11 +10,16 @@ export async function GET(
     const { userId } = auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Get the database user first
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // Now check if user owns the workflow
     const workflow = await prisma.workflow.findUnique({
       where: { id: params.workflowId },
     });
 
-    if (!workflow || workflow.userId !== userId) {
+    if (!workflow || workflow.userId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
