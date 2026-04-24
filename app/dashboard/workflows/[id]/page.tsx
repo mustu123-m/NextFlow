@@ -72,21 +72,23 @@ export default function WorkflowEditorPage() {
     loadWorkflow();
   }, [loadWorkflow]);
 
-  const handleAddNode = (type: string) => {
-    const newNode: Node<NodeData> = {
+ const handleAddNode = (type: string) => {
+  const newNode: Node<NodeData> = {
+    id: `${type}-${Date.now()}`,
+    data: {
       id: `${type}-${Date.now()}`,
-      data: {
-        id: `${type}-${Date.now()}`,
-        type: type as any,
-        label: type.charAt(0).toUpperCase() + type.slice(1),
-      },
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-    };
-
-    addStoreNode(newNode);
-    saveToHistory();
-    toast.success(`${type} node added`);
+      type: type as any,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+    },
+    position: { x: Math.random() * 400, y: Math.random() * 400 },
+     type: type,
+    draggable: true,  // ← ADD THIS LINE!
   };
+
+  addStoreNode(newNode);
+  saveToHistory();
+  toast.success(`${type} node added`);
+};
 
   const handleDeleteNode = (id: string) => {
     deleteStoreNode(id);
@@ -226,16 +228,22 @@ export default function WorkflowEditorPage() {
         <Sidebar onAddNode={handleAddNode} />
 
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden">
-          <WorkflowCanvas
-            initialNodes={storeNodes}
-            initialEdges={storeEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDelete={handleDeleteNode}
-            onNodeSelect={selectNode}
-          />
+        <div className="flex-1 overflow-hidden"><WorkflowCanvas
+  initialNodes={storeNodes}
+  initialEdges={storeEdges}
+  onNodesChange={(changes:any) => {
+    onNodesChange(changes);
+    setStoreNodes(hookNodes);
+  }}
+  onEdgesChange={(changes:any) => {
+    onEdgesChange(changes);
+    setStoreEdges(hookEdges);
+  }}
+  onConnect={onConnect}
+  onNodeDelete={handleDeleteNode}
+  onNodeSelect={selectNode}
+/>
+          
         </div>
 
         {/* Right Sidebar - History */}
