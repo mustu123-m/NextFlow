@@ -16,6 +16,7 @@ import { Node, Edge } from "reactflow";
 import { NodeData } from "@/lib/types";
 import { validateDAG, validateConnections } from "@/lib/utils/validation";
 import toast from "react-hot-toast";
+import { useEffect } from "react";
 
 interface WorkflowCanvasProps {
   initialNodes: Node<NodeData>[];
@@ -38,16 +39,39 @@ export default function WorkflowCanvas({
   onNodeSelect,
   onAddNode,
 }: WorkflowCanvasProps) {
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
+
+  // Sync initialNodes to internal state
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  // Sync initialEdges to internal state
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
+  const handleNodesChange = (changes: any) => {
+    onNodesChangeInternal(changes);
+    onNodesChange(changes);
+  };
+
+  const handleEdgesChange = (changes: any) => {
+    onEdgesChangeInternal(changes);
+    onEdgesChange(changes);
+  };
+
   const handleConnect = (connection: Connection) => {
-    const newEdges = [...initialEdges, connection as any];
-    const errors = validateConnections(initialNodes, newEdges);
+    const newEdges = [...edges, connection as any];
+    const errors = validateConnections(nodes, newEdges);
 
     if (errors.length > 0) {
       toast.error(errors[0]);
       return;
     }
 
-    if (!validateDAG(initialNodes, newEdges)) {
+    if (!validateDAG(nodes, newEdges)) {
       toast.error("Connection would create a circular dependency");
       return;
     }
@@ -58,10 +82,10 @@ export default function WorkflowCanvas({
 
   return (
     <ReactFlow
-      nodes={initialNodes}
-      edges={initialEdges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={handleNodesChange}
+      onEdgesChange={handleEdgesChange}
       onConnect={handleConnect}
       nodeTypes={nodeTypes}
       fitView
