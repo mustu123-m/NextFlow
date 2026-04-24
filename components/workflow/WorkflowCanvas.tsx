@@ -6,9 +6,6 @@ import {
   Controls,
   MiniMap,
   Connection,
-  useNodesState,
-  useEdgesState,
-  addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "@/components/nodes/NodeTypes";
@@ -16,7 +13,6 @@ import { Node, Edge } from "reactflow";
 import { NodeData } from "@/lib/types";
 import { validateDAG, validateConnections } from "@/lib/utils/validation";
 import toast from "react-hot-toast";
-import { useEffect } from "react";
 
 interface WorkflowCanvasProps {
   initialNodes: Node<NodeData>[];
@@ -39,39 +35,16 @@ export default function WorkflowCanvas({
   onNodeSelect,
   onAddNode,
 }: WorkflowCanvasProps) {
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState(initialEdges);
-
-  // Sync initialNodes to internal state
-  useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
-
-  // Sync initialEdges to internal state
-  useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges, setEdges]);
-
-  const handleNodesChange = (changes: any) => {
-    onNodesChangeInternal(changes);
-    onNodesChange(changes);
-  };
-
-  const handleEdgesChange = (changes: any) => {
-    onEdgesChangeInternal(changes);
-    onEdgesChange(changes);
-  };
-
   const handleConnect = (connection: Connection) => {
-    const newEdges = [...edges, connection as any];
-    const errors = validateConnections(nodes, newEdges);
+    const newEdges = [...initialEdges, connection as any];
+    const errors = validateConnections(initialNodes, newEdges);
 
     if (errors.length > 0) {
       toast.error(errors[0]);
       return;
     }
 
-    if (!validateDAG(nodes, newEdges)) {
+    if (!validateDAG(initialNodes, newEdges)) {
       toast.error("Connection would create a circular dependency");
       return;
     }
@@ -82,10 +55,10 @@ export default function WorkflowCanvas({
 
   return (
     <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={handleNodesChange}
-      onEdgesChange={handleEdgesChange}
+      nodes={initialNodes}
+      edges={initialEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
       onConnect={handleConnect}
       nodeTypes={nodeTypes}
       fitView
