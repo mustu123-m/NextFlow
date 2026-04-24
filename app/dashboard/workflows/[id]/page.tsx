@@ -16,6 +16,8 @@ import toast from "react-hot-toast";
 import { Node, NodeChange, EdgeChange, Connection } from "reactflow";
 import { NodeData } from "@/lib/types";
 import * as api from "@/lib/utils/api";
+import { applyNodeChanges } from "reactflow";
+
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -69,23 +71,9 @@ useEffect(() => {
 }, [storeNodes]);
 
   // Handle node position changes when dragging
+
 const onNodesChange = useCallback((changes: NodeChange[]) => {
-  setStoreNodes((prevNodes) => {
-    const updated = [...prevNodes];
-    changes.forEach((change) => {
-      const index = updated.findIndex((n) => n.id === change.id);
-      if (index !== -1) {
-        if (change.type === "position" && change.position) {
-          updated[index].position = change.position;
-        } else if (change.type === "select") {
-          updated[index].selected = change.selected;
-        } else if (change.type === "remove") {
-          updated.splice(index, 1);
-        }
-      }
-    });
-    return updated;
-  });
+  setStoreNodes((prev) => applyNodeChanges(changes, prev));
 }, [setStoreNodes]);
 
   // Handle edge changes
@@ -112,27 +100,23 @@ const onNodesChange = useCallback((changes: NodeChange[]) => {
 
   // Add new node from sidebar
 const handleAddNode = (type: string) => {
-    nodeCounterRef.current += 1;
-    const uniqueId = `${type}-${Date.now()}-${nodeCounterRef.current}`;
-    
-    const newNode: Node<NodeData> = {
+  nodeCounterRef.current += 1;
+  const uniqueId = `${type}-${Date.now()}-${nodeCounterRef.current}`;
+  const newNode: Node<NodeData> = {
+    id: uniqueId,
+    type,
+    position: { x: Math.random() * 400, y: Math.random() * 400 },
+    data: {
       id: uniqueId,
-      data: {
-        id: uniqueId,
-        type: type as any,
-        label: type.charAt(0).toUpperCase() + type.slice(1),
-      },
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      type: type,
-      draggable: true,
-    };
-
-    addStoreNode(newNode);
-     setTimeout(() => {
-    saveToHistory();
-  }, 0);
-    toast.success(`${type} node added`);
+      type: type as any,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+    },
+    draggable: true,
   };
+  addStoreNode(newNode);
+  saveToHistory(); // ✅ Zustand set is sync, this is fine
+  toast.success(`${type} node added`);
+};
 
   // Delete node
   const handleDeleteNode = (id: string) => {
