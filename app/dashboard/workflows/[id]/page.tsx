@@ -17,6 +17,37 @@ import { Node, NodeChange, EdgeChange, Connection } from "reactflow";
 import { NodeData } from "@/lib/types";
 import * as api from "@/lib/utils/api";
 import { applyNodeChanges } from "reactflow";
+const [isExecuting, setIsExecuting] = useState(false);
+
+// Add this state in the component
+const [selectedForExecution, setSelectedForExecution] = useState<string[]>([]);
+
+// Add these handler functions
+const handleSelectForExecution = (nodeId: string) => {
+  setSelectedForExecution((prev) =>
+    prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
+  );
+};
+
+const handleExecuteSelected = async () => {
+  if (selectedForExecution.length === 0) {
+    toast.error("Select nodes to execute");
+    return;
+  }
+
+  setIsExecuting(true);
+  try {
+    await handleSave();
+    // Execute only selected nodes
+    await executeWorkflow(workflowId, "selected", selectedForExecution);
+    toast.success("Selected nodes execution started");
+  } catch (error) {
+    toast.error("Failed to execute selected nodes");
+  } finally {
+    setIsExecuting(false);
+  }
+};
+
 
 export default function WorkflowEditorPage() {
   const params = useParams();
@@ -386,6 +417,27 @@ export default function WorkflowEditorPage() {
           >
             <span className="text-xl">⌨</span>
           </Button>
+
+          <Button
+  onClick={() => setSelectedForExecution([])}
+  disabled={selectedForExecution.length === 0}
+  size="icon"
+  variant="outline"
+  className="rounded-full text-slate-600 dark:text-slate-300"
+  title="Clear selection"
+>
+  <X className="h-4 w-4" />
+</Button>
+
+<Button
+  onClick={handleExecuteSelected}
+  disabled={isExecuting || selectedForExecution.length === 0}
+  size="icon"
+  className="rounded-full bg-green-500 hover:bg-green-600 text-white"
+  title="Execute selected nodes"
+>
+  <Play className="h-4 w-4" />
+</Button>
         </div>
 
         {/* Close menu when clicking elsewhere */}
