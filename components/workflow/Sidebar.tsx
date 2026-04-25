@@ -61,7 +61,7 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
   };
 
   return (
-    <div className="w-16 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col items-center py-4 gap-4">
+    <div className="w-16 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col items-center py-4 gap-2">
       {nodeTemplates.map((template) => {
         const Icon = template.icon;
         return (
@@ -70,16 +70,16 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
               onClick={() => onAddNode(template.type)}
               size="icon"
               variant="ghost"
-              className={`${template.color} hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg h-12 w-12 transition-colors`}
+              className={`${template.color} hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg h-10 w-10 transition-colors`}
               draggable
               onDragStart={(e) => handleDragStart(e, template.type)}
               title={template.label}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-5 w-5" />
             </Button>
             
             {/* Tooltip */}
-            <div className="absolute left-full ml-3 px-2 py-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
               {template.label}
             </div>
           </div>
@@ -92,10 +92,10 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
       <Button
         size="icon"
         variant="ghost"
-        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg h-12 w-12"
+        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg h-10 w-10"
         title="More"
       >
-        <MoreHorizontal className="h-6 w-6" />
+        <MoreHorizontal className="h-5 w-5" />
       </Button>
     </div>
   );
