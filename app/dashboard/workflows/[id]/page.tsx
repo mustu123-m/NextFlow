@@ -9,7 +9,7 @@ import HistoryPanel from "@/components/workflow/HistoryPanel";
 import { useExecution } from "@/lib/hooks/useExecution";
 import { useWorkflowStore } from "@/lib/store/workflowStore";
 import { exportWorkflow, importWorkflow } from "@/components/workflow/WorkflowExportImport";
-import { Play, Save, Share2, Menu, Sun, Moon, X } from "lucide-react";
+import { Play, Save, Share2, Menu, Sun, Moon, X, RotateCcw, RotateCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { Node, NodeChange, EdgeChange, Connection } from "reactflow";
 import { NodeData } from "@/lib/types";
@@ -317,129 +317,171 @@ export default function WorkflowEditorPage() {
         </div>
 
         {/* Bottom Floating Toolbar */}
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
-          {/* Add Node Button - with dropdown */}
-          <div className="relative">
+      {/* Bottom Floating Toolbar */}
+<div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
+  {/* Add Node Button - with dropdown */}
+  <div className="relative">
+    <Button
+      onClick={() => setShowNodeMenu(!showNodeMenu)}
+      size="icon"
+      variant="ghost"
+      className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+      title="Add node (N)"
+    >
+      <span className="text-xl">+</span>
+    </Button>
+
+    {/* Node Type Menu */}
+    {showNodeMenu && (
+      <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-2 z-50 w-48">
+        <div className="grid grid-cols-2 gap-1">
+          {[
+            { type: "text", label: "Text" },
+            { type: "uploadImage", label: "Image" },
+            { type: "uploadVideo", label: "Video" },
+            { type: "llm", label: "LLM" },
+            { type: "cropImage", label: "Crop" },
+            { type: "extractFrame", label: "Extract" },
+          ].map((node) => (
             <Button
-              onClick={() => setShowNodeMenu(!showNodeMenu)}
-              size="icon"
+              key={node.type}
+              onClick={() => {
+                handleAddNode(node.type);
+                setShowNodeMenu(false);
+              }}
               variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Add node (N)"
+              className="text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 justify-start"
             >
-              <span className="text-xl">+</span>
+              {node.label}
             </Button>
-
-            {/* Node Type Menu */}
-            {showNodeMenu && (
-              <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-2 z-50 w-48">
-                <div className="grid grid-cols-2 gap-1">
-                  {[
-                    { type: "text", label: "Text" },
-                    { type: "uploadImage", label: "Image" },
-                    { type: "uploadVideo", label: "Video" },
-                    { type: "llm", label: "LLM" },
-                    { type: "cropImage", label: "Crop" },
-                    { type: "extractFrame", label: "Extract" },
-                  ].map((node) => (
-                    <Button
-                      key={node.type}
-                      onClick={() => {
-                        handleAddNode(node.type);
-                        setShowNodeMenu(false);
-                      }}
-                      variant="ghost"
-                      className="text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 justify-start"
-                    >
-                      {node.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="Select tool"
-          >
-            <span className="text-xl">✓</span>
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="Hand tool (H)"
-          >
-            <span className="text-xl">✋</span>
-          </Button>
-
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            size="icon"
-            variant="ghost"
-            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="Save (Ctrl+S)"
-          >
-            <Save className="h-4 w-4" />
-          </Button>
-
-          <Button
-            onClick={handleExecute}
-            disabled={isExecuting || storeNodes.length === 0}
-            size="icon"
-            className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
-            title="Execute (Ctrl+Enter)"
-          >
-            <Play className="h-4 w-4" />
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="Keyboard shortcuts"
-          >
-            <span className="text-xl">⌨</span>
-          </Button>
-
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-          <Button
-            onClick={() => setSelectedForExecution([])}
-            disabled={selectedForExecution.length === 0}
-            size="icon"
-            variant="ghost"
-            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            title="Clear selection"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-
-          <Button
-            onClick={handleExecuteSelected}
-            disabled={isExecuting || selectedForExecution.length === 0}
-            size="icon"
-            className="rounded-full bg-green-500 hover:bg-green-600 text-white"
-            title="Execute selected nodes"
-          >
-            <Play className="h-4 w-4" />
-          </Button>
+          ))}
         </div>
+      </div>
+    )}
+  </div>
 
-        {/* Close menu when clicking elsewhere */}
-        {showNodeMenu && (
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setShowNodeMenu(false)}
-          />
-        )}
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Select tool"
+  >
+    <span className="text-xl">✓</span>
+  </Button>
+
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Hand tool (H)"
+  >
+    <span className="text-xl">✋</span>
+  </Button>
+
+  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+  {/* Undo Button */}
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Undo (Ctrl+Z)"
+    onClick={() => {
+      const store = useWorkflowStore.getState();
+      if (store.canUndo()) {
+        store.undo();
+        toast.success("Undo");
+      }
+    }}
+  >
+    <RotateCcw className="h-4 w-4" />
+  </Button>
+
+  {/* Redo Button */}
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Redo (Ctrl+Y)"
+    onClick={() => {
+      const store = useWorkflowStore.getState();
+      if (store.canRedo()) {
+        store.redo();
+        toast.success("Redo");
+      }
+    }}
+  >
+    <RotateCw className="h-4 w-4" />
+  </Button>
+
+  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+  {/* Save Button */}
+  <Button
+    onClick={handleSave}
+    disabled={isSaving}
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Save (Ctrl+S)"
+  >
+    <Save className="h-4 w-4" />
+  </Button>
+
+  {/* Execute Full Button */}
+  <Button
+    onClick={handleExecute}
+    disabled={isExecuting || storeNodes.length === 0}
+    size="icon"
+    className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+    title="Execute (Ctrl+Enter)"
+  >
+    <Play className="h-4 w-4" />
+  </Button>
+
+  {/* Keyboard Shortcuts Button */}
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Keyboard shortcuts"
+  >
+    <span className="text-xl">⌨</span>
+  </Button>
+
+  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+  {/* Clear Selection Button */}
+  <Button
+    onClick={() => setSelectedForExecution([])}
+    disabled={selectedForExecution.length === 0}
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Clear selection"
+  >
+    <X className="h-4 w-4" />
+  </Button>
+
+  {/* Execute Selected Button (Green) */}
+  <Button
+    onClick={handleExecuteSelected}
+    disabled={isExecuting || selectedForExecution.length === 0}
+    size="icon"
+    className="rounded-full bg-green-500 hover:bg-green-600 text-white"
+    title="Execute selected nodes"
+  >
+    <Play className="h-4 w-4" />
+  </Button>
+</div>
+
+{/* Close menu when clicking elsewhere */}
+{showNodeMenu && (
+  <div
+    className="fixed inset-0 z-30"
+    onClick={() => setShowNodeMenu(false)}
+  />
+)}
       </div>
     </div>
   );
