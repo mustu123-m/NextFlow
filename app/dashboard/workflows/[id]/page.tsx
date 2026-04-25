@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback ,useRef} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import WorkflowCanvas from "@/components/workflow/WorkflowCanvas";
@@ -11,18 +11,19 @@ import ValidationPanel from "@/components/workflow/ValidationPanel";
 import { useExecution } from "@/lib/hooks/useExecution";
 import { useWorkflowStore } from "@/lib/store/workflowStore";
 import { exportWorkflow, importWorkflow } from "@/components/workflow/WorkflowExportImport";
-import { Play, Save, Copy } from "lucide-react";
+import { Play, Save, Copy, Settings, Share2, Share, Menu, Sun, Moon } from "lucide-react";
 import toast from "react-hot-toast";
 import { Node, NodeChange, EdgeChange, Connection } from "reactflow";
 import { NodeData } from "@/lib/types";
 import * as api from "@/lib/utils/api";
 import { applyNodeChanges } from "reactflow";
 
-
 export default function WorkflowEditorPage() {
   const params = useParams();
   const workflowId = params.id as string;
-   const nodeCounterRef = useRef(0);
+  const nodeCounterRef = useRef(0);
+  const [isDark, setIsDark] = useState(false);
+
   const {
     nodes: storeNodes,
     edges: storeEdges,
@@ -38,7 +39,7 @@ export default function WorkflowEditorPage() {
 
   const { executeWorkflow } = useExecution();
 
-  const [workflowName, setWorkflowName] = useState("Untitled Workflow");
+  const [workflowName, setWorkflowName] = useState("Untitled");
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ export default function WorkflowEditorPage() {
       setLoading(true);
       try {
         const workflow = await api.getWorkflow(workflowId);
-        setWorkflowName(workflow.name || "Untitled Workflow");
+        setWorkflowName(workflow.name || "Untitled");
         setStoreNodes(workflow.nodes || []);
         setStoreEdges(workflow.edges || []);
       } catch (error) {
@@ -61,22 +62,11 @@ export default function WorkflowEditorPage() {
     };
     load();
   }, [workflowId, setStoreNodes, setStoreEdges]);
-  // DEBUG: Log store nodes
-useEffect(() => {
-  console.log("❌ DEBUG PAGE - Store nodes:", storeNodes);
-  console.log("❌ DEBUG PAGE - Nodes length:", storeNodes.length);
-  storeNodes.forEach((node, i) => {
-    console.log(`  Node ${i}:`, node.id, node.type, node.data?.type);
-  });
-}, [storeNodes]);
 
-  // Handle node position changes when dragging
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setStoreNodes((prev) => applyNodeChanges(changes, prev));
+  }, [setStoreNodes]);
 
-const onNodesChange = useCallback((changes: NodeChange[]) => {
-  setStoreNodes((prev) => applyNodeChanges(changes, prev));
-}, [setStoreNodes]);
-
-  // Handle edge changes
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setStoreEdges((prevEdges) => {
       let updated = [...prevEdges];
@@ -89,7 +79,6 @@ const onNodesChange = useCallback((changes: NodeChange[]) => {
     });
   }, [setStoreEdges]);
 
-  // Handle new connections
   const onConnect = useCallback((connection: Connection) => {
     const newEdge = {
       ...connection,
@@ -98,34 +87,31 @@ const onNodesChange = useCallback((changes: NodeChange[]) => {
     addStoreEdge(newEdge);
   }, [addStoreEdge]);
 
-  // Add new node from sidebar
-const handleAddNode = (type: string) => {
-  nodeCounterRef.current += 1;
-  const uniqueId = `${type}-${Date.now()}-${nodeCounterRef.current}`;
-  const newNode: Node<NodeData> = {
-    id: uniqueId,
-    type,
-    position: { x: Math.random() * 400, y: Math.random() * 400 },
-    data: {
+  const handleAddNode = (type: string) => {
+    nodeCounterRef.current += 1;
+    const uniqueId = `${type}-${Date.now()}-${nodeCounterRef.current}`;
+    const newNode: Node<NodeData> = {
       id: uniqueId,
-      type: type as any,
-      label: type.charAt(0).toUpperCase() + type.slice(1),
-    },
-    draggable: true,
+      type,
+      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      data: {
+        id: uniqueId,
+        type: type as any,
+        label: type.charAt(0).toUpperCase() + type.slice(1),
+      },
+      draggable: true,
+    };
+    addStoreNode(newNode);
+    saveToHistory();
+    toast.success(`${type} node added`);
   };
-  addStoreNode(newNode);
-  saveToHistory(); // ✅ Zustand set is sync, this is fine
-  toast.success(`${type} node added`);
-};
 
-  // Delete node
   const handleDeleteNode = (id: string) => {
     deleteStoreNode(id);
     saveToHistory();
     toast.success("Node deleted");
   };
 
-  // Save workflow
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -143,7 +129,6 @@ const handleAddNode = (type: string) => {
     }
   };
 
-  // Execute workflow
   const handleExecute = async () => {
     if (storeNodes.length === 0) {
       toast.error("Add nodes to your workflow first");
@@ -158,17 +143,15 @@ const handleAddNode = (type: string) => {
     } catch (error) {
       toast.error("Failed to execute workflow");
     } finally {
-      setIsExecuting(false);
+      setIsExecuting(true);
     }
   };
 
-  // Export workflow
   const handleExport = () => {
     exportWorkflow(storeNodes, storeEdges, workflowName);
     toast.success("Workflow exported");
   };
 
-  // Import workflow
   const handleImport = (data: any) => {
     try {
       const { nodes, edges } = importWorkflow(data);
@@ -181,7 +164,6 @@ const handleAddNode = (type: string) => {
     }
   };
 
-  // Clear canvas
   const handleClear = () => {
     if (confirm("Are you sure? This will clear all nodes and edges.")) {
       reset();
@@ -189,7 +171,6 @@ const handleAddNode = (type: string) => {
     }
   };
 
-  // Duplicate workflow
   const handleDuplicate = async () => {
     try {
       const newName = `${workflowName} (copy)`;
@@ -213,62 +194,64 @@ const handleAddNode = (type: string) => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-secondary bg-secondary/50 p-4">
-        <div className="flex items-center justify-between gap-4">
-          <input
-            type="text"
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            className="text-2xl font-bold bg-transparent border-none focus:outline-none"
-          />
-          <div className="flex gap-2">
-            <ToolbarActions
-              onExport={handleExport}
-              onImport={handleImport}
-              onClear={handleClear}
-            />
+    <div className="flex h-screen bg-white dark:bg-slate-950">
+      {/* Left Sidebar - Icon Only */}
+      <Sidebar onAddNode={handleAddNode} />
+
+      {/* Main Content */}
+      <div className="flex flex-col flex-1">
+        {/* Header - Minimal */}
+        <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
+              <span className="text-white text-sm font-bold">⚙</span>
+            </div>
+            <div>
+              <input
+                type="text"
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                className="text-lg font-semibold bg-transparent border-none focus:outline-none text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
             <Button
-              onClick={handleDuplicate}
-              variant="outline"
+              onClick={() => setIsDark(!isDark)}
+              variant="ghost"
               size="icon"
-              title="Duplicate Workflow"
+              className="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
             >
-              <Copy className="h-4 w-4" />
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
+            
             <Button
-              onClick={handleSave}
-              disabled={isSaving}
               variant="outline"
+              className="gap-2 border-slate-200 dark:border-slate-800"
             >
-              <Save className="mr-2 h-4 w-4" />
-              Save
+              <Share2 className="h-4 w-4" />
+              Share
             </Button>
+
             <Button
-              onClick={handleExecute}
-              disabled={isExecuting || storeNodes.length === 0}
+              variant="outline"
+              className="gap-2 border-slate-200 dark:border-slate-800"
             >
-              <Play className="mr-2 h-4 w-4" />
-              Execute
+              Turn workflow into app
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-600 dark:text-slate-400"
+            >
+              <Menu className="h-5 w-5" />
             </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Validation Panel */}
-      {storeNodes.length > 0 && (
-        <div className="px-4 py-2">
-          <ValidationPanel nodes={storeNodes} edges={storeEdges} />
-        </div>
-      )}
-
-      {/* Main Canvas Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <Sidebar onAddNode={handleAddNode} />
-
-        {/* Canvas */}
+        {/* Canvas Area */}
         <div className="flex-1 overflow-hidden">
           <WorkflowCanvas
             initialNodes={storeNodes}
@@ -281,8 +264,67 @@ const handleAddNode = (type: string) => {
           />
         </div>
 
-        {/* Right Sidebar - History */}
-        <HistoryPanel workflowId={workflowId} />
+        {/* Bottom Floating Toolbar */}
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-2 py-2 shadow-lg">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            title="Add node (N)"
+          >
+            <span className="text-xl">+</span>
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            title="Select tool"
+          >
+            <span className="text-xl">✓</span>
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            title="Hand tool (H)"
+          >
+            <span className="text-xl">✋</span>
+          </Button>
+
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            title="Save (Ctrl+S)"
+          >
+            <Save className="h-4 w-4" />
+          </Button>
+
+          <Button
+            onClick={handleExecute}
+            disabled={isExecuting || storeNodes.length === 0}
+            size="icon"
+            className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+            title="Execute (Ctrl+Enter)"
+          >
+            <Play className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full"
+            title="Keyboard shortcuts"
+          >
+            <span className="text-xl">⌨</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

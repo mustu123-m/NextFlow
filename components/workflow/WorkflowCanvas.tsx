@@ -52,13 +52,7 @@ export default function WorkflowCanvas({
     toast.success("Connection created");
   };
 
-  // DEBUG: Log canvas nodes
-console.log("❌ DEBUG CANVAS - Received nodes:", initialNodes);
-console.log("❌ DEBUG CANVAS - Nodes length:", initialNodes.length);
-initialNodes.forEach((node, i) => {
-  console.log(`  Canvas Node ${i}:`, node.id, node.type, node.data?.type);
-});
-const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
   return (
     <ReactFlow
@@ -69,13 +63,23 @@ const memoizedNodeTypes = useMemo(() => nodeTypes, []);
       onConnect={handleConnect}
       nodeTypes={memoizedNodeTypes}
       fitView
+      defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       onNodeClick={(event, node) => onNodeSelect?.(node.id)}
       onPaneClick={() => onNodeSelect?.(null)}
       deleteKeyCode="Delete"
+      className="bg-slate-50 dark:bg-slate-900"
     >
-      <Background />
-      <Controls />
-      <MiniMap />
+      <Background color="#e2e8f0" style={{ backgroundColor: "#f8fafc" }} gap={16} />
+      <Controls position="bottom-left" />
+      <MiniMap position="bottom-right" />
+
+      {/* Empty State */}
+      {initialNodes.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <p className="text-slate-400 text-lg font-medium">Add a node</p>
+          <p className="text-slate-400 text-sm mt-1">Double click, right click, or press N</p>
+        </div>
+      )}
     </ReactFlow>
   );
 }

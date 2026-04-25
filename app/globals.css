@@ -27,3 +27,30 @@ body {
 .react-flow__handle {
   @apply bg-primary;
 }
+
+/* React Flow Grid Background */
+.react-flow__background {
+  background-color: #f8fafc !important;
+}
+
+.react-flow__background circle {
+  fill: #e2e8f0 !important;
+}
+
+/* Dark Mode */
+.dark .react-flow__background {
+  background-color: #0f172a !important;
+}
+
+.dark .react-flow__background circle {
+  fill: #1e293b !important;
+}
+
+/* Canvas styling */
+.react-flow {
+  background-color: #f8fafc;
+}
+
+.dark .react-flow {
+  background-color: #0f172a;
+}
