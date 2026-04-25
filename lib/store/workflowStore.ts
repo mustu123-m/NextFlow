@@ -13,15 +13,9 @@ export interface WorkflowState {
   executionId: string | null;
 
   setNodes: (
-    nodes:
-      | Node<NodeData>[]
-      | ((prev: Node<NodeData>[]) => Node<NodeData>[])
+    nodes: Node<NodeData>[] | ((prev: Node<NodeData>[]) => Node<NodeData>[])
   ) => void;
-  setEdges: (
-    edges:
-      | Edge[]
-      | ((prev: Edge[]) => Edge[])
-  ) => void;
+  setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
   updateNode: (id: string, data: Partial<NodeData>) => void;
   deleteNode: (id: string) => void;
   addNode: (node: Node<NodeData>) => void;
@@ -37,11 +31,12 @@ export interface WorkflowState {
   saveToHistory: () => void;
 }
 
+// ✅ Seed history with empty snapshot so first action is undoable
 const initialState = {
   nodes: [],
   edges: [],
-  history: [],
-  historyIndex: -1,
+  history: [{ nodes: [], edges: [] }],
+  historyIndex: 0,
   selectedNodeId: null,
   isExecuting: false,
   executionId: null,
@@ -73,7 +68,9 @@ export const useWorkflowStore = create<WorkflowState>()(
     deleteNode: (id) =>
       set((state) => ({
         nodes: state.nodes.filter((node) => node.id !== id),
-        edges: state.edges.filter((edge) => edge.source !== id && edge.target !== id),
+        edges: state.edges.filter(
+          (edge) => edge.source !== id && edge.target !== id
+        ),
       })),
 
     addNode: (node) =>
@@ -98,6 +95,7 @@ export const useWorkflowStore = create<WorkflowState>()(
 
     saveToHistory: () =>
       set((state) => {
+        // Slice off any redo history ahead of current index
         const newHistory = state.history.slice(0, state.historyIndex + 1);
         newHistory.push({
           nodes: [...state.nodes],
@@ -133,8 +131,8 @@ export const useWorkflowStore = create<WorkflowState>()(
         };
       }),
 
+    // These are kept for API compatibility but use the reactive values in UI instead
     canUndo: () => get().historyIndex > 0,
-
     canRedo: () => get().historyIndex < get().history.length - 1,
 
     setExecuting: (executing, executionId) =>
@@ -143,6 +141,12 @@ export const useWorkflowStore = create<WorkflowState>()(
         executionId: executionId || null,
       }),
 
-    reset: () => set(initialState),
+    reset: () =>
+      set({
+        ...initialState,
+        // Reset history to fresh empty snapshot
+        history: [{ nodes: [], edges: [] }],
+        historyIndex: 0,
+      }),
   }))
 );

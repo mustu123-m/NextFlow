@@ -28,6 +28,12 @@ export default function WorkflowEditorPage() {
   const [loading, setLoading] = useState(false);
   const [selectedForExecution, setSelectedForExecution] = useState<string[]>([]);
 
+  // ✅ Reactive undo/redo — re-renders when historyIndex changes
+  const historyIndex = useWorkflowStore((s) => s.historyIndex);
+  const historyLength = useWorkflowStore((s) => s.history.length);
+  const canUndoVal = historyIndex > 0;
+  const canRedoVal = historyIndex < historyLength - 1;
+
   const {
     nodes: storeNodes,
     edges: storeEdges,
@@ -39,6 +45,8 @@ export default function WorkflowEditorPage() {
     selectNode,
     saveToHistory,
     reset,
+    undo,
+    redo,
   } = useWorkflowStore();
 
   const { executeWorkflow } = useExecution();
@@ -131,6 +139,7 @@ export default function WorkflowEditorPage() {
   const handleDeleteNode = (id: string) => {
     deleteStoreNode(id);
     saveToHistory();
+    setSelectedForExecution((prev) => prev.filter((nId) => nId !== id));
     toast.success("Node deleted");
   };
 
@@ -156,7 +165,6 @@ export default function WorkflowEditorPage() {
       toast.error("Add nodes to your workflow first");
       return;
     }
-
     setIsExecuting(true);
     try {
       await handleSave();
@@ -169,18 +177,22 @@ export default function WorkflowEditorPage() {
     }
   };
 
-  const handleSelectForExecution = (nodeId: string) => {
-    setSelectedForExecution((prev) =>
-      prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
-    );
-  };
+  // ✅ Loop-safe: only updates state if selection actually changed
+  // Returns the same array reference if nothing changed → React skips re-render → no loop
+  const handleSelectForExecution = useCallback((nodeIds: string[]) => {
+    setSelectedForExecution((prev) => {
+      const same =
+        prev.length === nodeIds.length &&
+        prev.every((id) => nodeIds.includes(id));
+      return same ? prev : nodeIds;
+    });
+  }, []);
 
   const handleExecuteSelected = async () => {
     if (selectedForExecution.length === 0) {
       toast.error("Select nodes to execute");
       return;
     }
-
     setIsExecuting(true);
     try {
       await handleSave();
@@ -213,6 +225,7 @@ export default function WorkflowEditorPage() {
   const handleClear = () => {
     if (confirm("Are you sure? This will clear all nodes and edges.")) {
       reset();
+      setSelectedForExecution([]);
       toast.success("Canvas cleared");
     }
   };
@@ -241,12 +254,12 @@ export default function WorkflowEditorPage() {
 
   return (
     <div className="flex h-screen bg-white dark:bg-slate-950">
-      {/* Left Sidebar - Icon Only */}
+      {/* Left Sidebar */}
       <Sidebar onAddNode={handleAddNode} />
 
       {/* Main Content */}
       <div className="flex flex-col flex-1">
-        {/* Header - Minimal */}
+        {/* Header */}
         <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
@@ -309,6 +322,8 @@ export default function WorkflowEditorPage() {
               onConnect={onConnect}
               onNodeDelete={handleDeleteNode}
               onNodeSelect={selectNode}
+              onNodeSelectForExecution={handleSelectForExecution}
+              selectedForExecution={selectedForExecution}
             />
           </div>
 
@@ -317,171 +332,160 @@ export default function WorkflowEditorPage() {
         </div>
 
         {/* Bottom Floating Toolbar */}
-      {/* Bottom Floating Toolbar */}
-<div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
-  {/* Add Node Button - with dropdown */}
-  <div className="relative">
-    <Button
-      onClick={() => setShowNodeMenu(!showNodeMenu)}
-      size="icon"
-      variant="ghost"
-      className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-      title="Add node (N)"
-    >
-      <span className="text-xl">+</span>
-    </Button>
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
 
-    {/* Node Type Menu */}
-    {showNodeMenu && (
-      <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-2 z-50 w-48">
-        <div className="grid grid-cols-2 gap-1">
-          {[
-            { type: "text", label: "Text" },
-            { type: "uploadImage", label: "Image" },
-            { type: "uploadVideo", label: "Video" },
-            { type: "llm", label: "LLM" },
-            { type: "cropImage", label: "Crop" },
-            { type: "extractFrame", label: "Extract" },
-          ].map((node) => (
+          {/* Add Node Button with dropdown */}
+          <div className="relative">
             <Button
-              key={node.type}
-              onClick={() => {
-                handleAddNode(node.type);
-                setShowNodeMenu(false);
-              }}
+              onClick={() => setShowNodeMenu(!showNodeMenu)}
+              size="icon"
               variant="ghost"
-              className="text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 justify-start"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Add node"
             >
-              {node.label}
+              <span className="text-xl">+</span>
             </Button>
-          ))}
+
+            {showNodeMenu && (
+              <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-2 z-50 w-48">
+                <div className="grid grid-cols-2 gap-1">
+                  {[
+                    { type: "text", label: "Text" },
+                    { type: "uploadImage", label: "Image" },
+                    { type: "uploadVideo", label: "Video" },
+                    { type: "llm", label: "LLM" },
+                    { type: "cropImage", label: "Crop" },
+                    { type: "extractFrame", label: "Extract" },
+                  ].map((node) => (
+                    <Button
+                      key={node.type}
+                      onClick={() => {
+                        handleAddNode(node.type);
+                        setShowNodeMenu(false);
+                      }}
+                      variant="ghost"
+                      className="text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 justify-start"
+                    >
+                      {node.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Select tool"
+          >
+            <span className="text-xl">✓</span>
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Hand tool"
+          >
+            <span className="text-xl">✋</span>
+          </Button>
+
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+            title="Undo (Ctrl+Z)"
+            disabled={!canUndoVal}
+            onClick={() => { undo(); toast.success("Undo"); }}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+            title="Redo (Ctrl+Y)"
+            disabled={!canRedoVal}
+            onClick={() => { redo(); toast.success("Redo"); }}
+          >
+            <RotateCw className="h-4 w-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Save (Ctrl+S)"
+          >
+            <Save className="h-4 w-4" />
+          </Button>
+
+          {/* Execute all — blue */}
+          <Button
+            onClick={handleExecute}
+            disabled={isExecuting || storeNodes.length === 0}
+            size="icon"
+            className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+            title="Execute all (Ctrl+Enter)"
+          >
+            <Play className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Keyboard shortcuts"
+          >
+            <span className="text-xl">⌨</span>
+          </Button>
+
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+          {/* Clear execution selection */}
+          <Button
+            onClick={() => setSelectedForExecution([])}
+            disabled={selectedForExecution.length === 0}
+            size="icon"
+            variant="ghost"
+            className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Clear selection"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
+          {/* Execute selected — green */}
+          <Button
+            onClick={handleExecuteSelected}
+            disabled={isExecuting || selectedForExecution.length === 0}
+            size="icon"
+            className="rounded-full bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              selectedForExecution.length === 0
+                ? "Click nodes on canvas to select"
+                : `Execute ${selectedForExecution.length} selected node${selectedForExecution.length > 1 ? "s" : ""}`
+            }
+          >
+            <Play className="h-4 w-4" />
+          </Button>
         </div>
-      </div>
-    )}
-  </div>
 
-  <Button
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Select tool"
-  >
-    <span className="text-xl">✓</span>
-  </Button>
-
-  <Button
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Hand tool (H)"
-  >
-    <span className="text-xl">✋</span>
-  </Button>
-
-  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-  {/* Undo Button */}
-  <Button
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Undo (Ctrl+Z)"
-    onClick={() => {
-      const store = useWorkflowStore.getState();
-      if (store.canUndo()) {
-        store.undo();
-        toast.success("Undo");
-      }
-    }}
-  >
-    <RotateCcw className="h-4 w-4" />
-  </Button>
-
-  {/* Redo Button */}
-  <Button
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Redo (Ctrl+Y)"
-    onClick={() => {
-      const store = useWorkflowStore.getState();
-      if (store.canRedo()) {
-        store.redo();
-        toast.success("Redo");
-      }
-    }}
-  >
-    <RotateCw className="h-4 w-4" />
-  </Button>
-
-  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-  {/* Save Button */}
-  <Button
-    onClick={handleSave}
-    disabled={isSaving}
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Save (Ctrl+S)"
-  >
-    <Save className="h-4 w-4" />
-  </Button>
-
-  {/* Execute Full Button */}
-  <Button
-    onClick={handleExecute}
-    disabled={isExecuting || storeNodes.length === 0}
-    size="icon"
-    className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
-    title="Execute (Ctrl+Enter)"
-  >
-    <Play className="h-4 w-4" />
-  </Button>
-
-  {/* Keyboard Shortcuts Button */}
-  <Button
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Keyboard shortcuts"
-  >
-    <span className="text-xl">⌨</span>
-  </Button>
-
-  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-  {/* Clear Selection Button */}
-  <Button
-    onClick={() => setSelectedForExecution([])}
-    disabled={selectedForExecution.length === 0}
-    size="icon"
-    variant="ghost"
-    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-    title="Clear selection"
-  >
-    <X className="h-4 w-4" />
-  </Button>
-
-  {/* Execute Selected Button (Green) */}
-  <Button
-    onClick={handleExecuteSelected}
-    disabled={isExecuting || selectedForExecution.length === 0}
-    size="icon"
-    className="rounded-full bg-green-500 hover:bg-green-600 text-white"
-    title="Execute selected nodes"
-  >
-    <Play className="h-4 w-4" />
-  </Button>
-</div>
-
-{/* Close menu when clicking elsewhere */}
-{showNodeMenu && (
-  <div
-    className="fixed inset-0 z-30"
-    onClick={() => setShowNodeMenu(false)}
-  />
-)}
+        {/* Close node menu when clicking elsewhere */}
+        {showNodeMenu && (
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setShowNodeMenu(false)}
+          />
+        )}
       </div>
     </div>
   );
