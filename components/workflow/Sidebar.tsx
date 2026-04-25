@@ -61,7 +61,7 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
   };
 
   return (
-    <div className="w-20 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col items-center py-4 gap-3">
+    <div className="w-16 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col items-center py-4 gap-4">
       {nodeTemplates.map((template) => {
         const Icon = template.icon;
         return (

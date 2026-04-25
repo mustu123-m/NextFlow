@@ -71,7 +71,7 @@ export default function WorkflowCanvas({
     >
       <Background color="#e2e8f0" style={{ backgroundColor: "#f8fafc" }} gap={16} />
       <Controls position="bottom-left" />
-      <MiniMap position="bottom-right" />
+   
 
       {/* Empty State */}
       {initialNodes.length === 0 && (

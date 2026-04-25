@@ -43,15 +43,35 @@ export default function WorkflowEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Add state for node menu
+const [showNodeMenu, setShowNodeMenu] = useState(false);
 
-  // Handle dark mode toggle
+// Add this function to open node menu
+const handleAddNodeMenu = () => {
+  setShowNodeMenu(!showNodeMenu);
+};
+
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDark]);
+
+  // Load saved theme on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
 
   // Load workflow on mount
   useEffect(() => {
@@ -203,7 +223,7 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className={`flex h-screen ${isDark ? "dark" : ""}`}>
+    <div className={`flex h-screen`}>
       <div className="flex h-screen w-full bg-white dark:bg-slate-950">
         {/* Left Sidebar - Icon Only */}
         <Sidebar onAddNode={handleAddNode} />
@@ -236,21 +256,20 @@ export default function WorkflowEditorPage() {
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
               
-              <Button
-                variant="outline"
-                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </Button>
+            <Button
+  variant="ghost"
+  className="gap-2 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+>
+  <Share2 className="h-4 w-4" />
+  Share
+</Button>
 
-              <Button
-                variant="outline"
-                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
-              >
-                Turn workflow into app
-              </Button>
-
+<Button
+  variant="ghost"
+  className="gap-2 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+>
+  Turn workflow into app
+</Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -274,67 +293,107 @@ export default function WorkflowEditorPage() {
             />
           </div>
 
-          {/* Bottom Floating Toolbar */}
-          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
+       {/* Bottom Floating Toolbar */}
+<div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
+  {/* Add Node Button - with dropdown */}
+  <div className="relative">
+    <Button
+      onClick={handleAddNodeMenu}
+      size="icon"
+      variant="ghost"
+      className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+      title="Add node (N)"
+    >
+      <span className="text-xl">+</span>
+    </Button>
+
+    {/* Node Type Menu */}
+    {showNodeMenu && (
+      <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-2 z-50 w-48">
+        <div className="grid grid-cols-2 gap-1">
+          {[
+            { type: "text", label: "Text" },
+            { type: "uploadImage", label: "Image" },
+            { type: "uploadVideo", label: "Video" },
+            { type: "llm", label: "LLM" },
+            { type: "cropImage", label: "Crop" },
+            { type: "extractFrame", label: "Extract" },
+          ].map((node) => (
             <Button
-              size="icon"
+              key={node.type}
+              onClick={() => {
+                handleAddNode(node.type);
+                setShowNodeMenu(false);
+              }}
               variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Add node (N)"
+              className="text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 justify-start"
             >
-              <span className="text-xl">+</span>
+              {node.label}
             </Button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Select tool"
-            >
-              <span className="text-xl">✓</span>
-            </Button>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Select tool"
+  >
+    <span className="text-xl">✓</span>
+  </Button>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Hand tool (H)"
-            >
-              <span className="text-xl">✋</span>
-            </Button>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Hand tool (H)"
+  >
+    <span className="text-xl">✋</span>
+  </Button>
 
-            <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+  <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
 
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              size="icon"
-              variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Save (Ctrl+S)"
-            >
-              <Save className="h-4 w-4" />
-            </Button>
+  <Button
+    onClick={handleSave}
+    disabled={isSaving}
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Save (Ctrl+S)"
+  >
+    <Save className="h-4 w-4" />
+  </Button>
 
-            <Button
-              onClick={handleExecute}
-              disabled={isExecuting || storeNodes.length === 0}
-              size="icon"
-              className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
-              title="Execute (Ctrl+Enter)"
-            >
-              <Play className="h-4 w-4" />
-            </Button>
+  <Button
+    onClick={handleExecute}
+    disabled={isExecuting || storeNodes.length === 0}
+    size="icon"
+    className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+    title="Execute (Ctrl+Enter)"
+  >
+    <Play className="h-4 w-4" />
+  </Button>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Keyboard shortcuts"
-            >
-              <span className="text-xl">⌨</span>
-            </Button>
-          </div>
+  <Button
+    size="icon"
+    variant="ghost"
+    className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+    title="Keyboard shortcuts"
+  >
+    <span className="text-xl">⌨</span>
+  </Button>
+</div>
+
+{/* Close menu when clicking elsewhere */}
+{showNodeMenu && (
+  <div
+    className="fixed inset-0 z-30"
+    onClick={() => setShowNodeMenu(false)}
+  />
+)}
         </div>
       </div>
     </div>
