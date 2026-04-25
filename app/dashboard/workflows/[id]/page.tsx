@@ -44,6 +44,15 @@ export default function WorkflowEditorPage() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Handle dark mode toggle
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDark]);
+
   // Load workflow on mount
   useEffect(() => {
     const load = async () => {
@@ -143,7 +152,7 @@ export default function WorkflowEditorPage() {
     } catch (error) {
       toast.error("Failed to execute workflow");
     } finally {
-      setIsExecuting(true);
+      setIsExecuting(false);
     }
   };
 
@@ -194,136 +203,138 @@ export default function WorkflowEditorPage() {
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-slate-950">
-      {/* Left Sidebar - Icon Only */}
-      <Sidebar onAddNode={handleAddNode} />
+    <div className={`flex h-screen ${isDark ? "dark" : ""}`}>
+      <div className="flex h-screen w-full bg-white dark:bg-slate-950">
+        {/* Left Sidebar - Icon Only */}
+        <Sidebar onAddNode={handleAddNode} />
 
-      {/* Main Content */}
-      <div className="flex flex-col flex-1">
-        {/* Header - Minimal */}
-        <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
-              <span className="text-white text-sm font-bold">⚙</span>
+        {/* Main Content */}
+        <div className="flex flex-col flex-1">
+          {/* Header - Minimal */}
+          <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
+                <span className="text-white text-sm font-bold">⚙</span>
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={workflowName}
+                  onChange={(e) => setWorkflowName(e.target.value)}
+                  className="text-lg font-semibold bg-transparent border-none focus:outline-none text-slate-900 dark:text-white"
+                />
+              </div>
             </div>
-            <div>
-              <input
-                type="text"
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                className="text-lg font-semibold bg-transparent border-none focus:outline-none text-slate-900 dark:text-white"
-              />
+
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setIsDark(!isDark)}
+                variant="ghost"
+                size="icon"
+                className="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+              >
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+
+              <Button
+                variant="outline"
+                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              >
+                Turn workflow into app
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-slate-600 dark:text-slate-400"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
             </div>
+          </header>
+
+          {/* Canvas Area */}
+          <div className="flex-1 overflow-hidden">
+            <WorkflowCanvas
+              initialNodes={storeNodes}
+              initialEdges={storeEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeDelete={handleDeleteNode}
+              onNodeSelect={selectNode}
+            />
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Bottom Floating Toolbar */}
+          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-3 py-2 shadow-lg z-40">
             <Button
-              onClick={() => setIsDark(!isDark)}
-              variant="ghost"
               size="icon"
-              className="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+              variant="ghost"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Add node (N)"
             >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="gap-2 border-slate-200 dark:border-slate-800"
-            >
-              <Share2 className="h-4 w-4" />
-              Share
+              <span className="text-xl">+</span>
             </Button>
 
             <Button
-              variant="outline"
-              className="gap-2 border-slate-200 dark:border-slate-800"
+              size="icon"
+              variant="ghost"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Select tool"
             >
-              Turn workflow into app
+              <span className="text-xl">✓</span>
             </Button>
 
             <Button
-              variant="ghost"
               size="icon"
-              className="text-slate-600 dark:text-slate-400"
+              variant="ghost"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Hand tool (H)"
             >
-              <Menu className="h-5 w-5" />
+              <span className="text-xl">✋</span>
+            </Button>
+
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
+
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              size="icon"
+              variant="ghost"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Save (Ctrl+S)"
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+
+            <Button
+              onClick={handleExecute}
+              disabled={isExecuting || storeNodes.length === 0}
+              size="icon"
+              className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+              title="Execute (Ctrl+Enter)"
+            >
+              <Play className="h-4 w-4" />
+            </Button>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Keyboard shortcuts"
+            >
+              <span className="text-xl">⌨</span>
             </Button>
           </div>
-        </header>
-
-        {/* Canvas Area */}
-        <div className="flex-1 overflow-hidden">
-          <WorkflowCanvas
-            initialNodes={storeNodes}
-            initialEdges={storeEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDelete={handleDeleteNode}
-            onNodeSelect={selectNode}
-          />
-        </div>
-
-        {/* Bottom Floating Toolbar */}
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full px-2 py-2 shadow-lg">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full"
-            title="Add node (N)"
-          >
-            <span className="text-xl">+</span>
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full"
-            title="Select tool"
-          >
-            <span className="text-xl">✓</span>
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full"
-            title="Hand tool (H)"
-          >
-            <span className="text-xl">✋</span>
-          </Button>
-
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800" />
-
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            size="icon"
-            variant="ghost"
-            className="rounded-full"
-            title="Save (Ctrl+S)"
-          >
-            <Save className="h-4 w-4" />
-          </Button>
-
-          <Button
-            onClick={handleExecute}
-            disabled={isExecuting || storeNodes.length === 0}
-            size="icon"
-            className="rounded-full bg-blue-500 hover:bg-blue-600 text-white"
-            title="Execute (Ctrl+Enter)"
-          >
-            <Play className="h-4 w-4" />
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            className="rounded-full"
-            title="Keyboard shortcuts"
-          >
-            <span className="text-xl">⌨</span>
-          </Button>
         </div>
       </div>
     </div>
